@@ -50,7 +50,7 @@
 
 | 页面指标 | 观远字段 | 说明 |
 |---|---|---|
-| 线索 | `today_indpdt_leads_cnt` | 独立线索数 |
+| 线索 | `today_down_sign_leads_cnt` | 下发线索数 |
 | 到店 | `today_fst_touch_pflow_cnt` | 首触到店 |
 | 试驾 | `today_fst_touch_trial_cnt` | 首触试驾 |
 | 订单 | `today_fst_touch_order_cnt` | 首触订单 |
