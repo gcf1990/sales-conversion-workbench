@@ -101,7 +101,10 @@
                   <th>线索到店率</th>
                   <th>30s以下占比</th>
                   <th>试驾订单率</th>
-                  <th>影响规模</th>
+                  <th>
+                    影响规模
+                    <span class="th-note" title="预计影响订单 = 异常环节补齐到均值后的理论订单差额，Demo 阶段为样例测算，仅用于排序和优先级判断，不作为销量承诺。">口径</span>
+                  </th>
                   <th>操作</th>
                 </tr>
               </thead>
@@ -136,7 +139,7 @@
                 <h3 id="diagnosisTitle">IP 电话邀约问题</h3>
                 <p id="diagnosisSub">按问题类型、顾问和明细证据下钻。</p>
               </div>
-              <button class="secondary-button" id="resetIssueButton" type="button">重置问题筛选</button>
+              <button class="secondary-button" id="resetIssueButton" type="button">重置明细筛选</button>
             </div>
             <div class="issue-layout">
               <div class="issue-chart" id="issueChart"></div>
@@ -146,6 +149,17 @@
               </div>
             </div>
           </div>
+        </section>
+
+        <section class="panel action-panel" aria-label="门店整改清单">
+          <div class="section-heading">
+            <div>
+              <h2>门店整改清单</h2>
+              <p class="panel-subtitle" id="actionSummary">按当前诊断结果归纳门店级整改动作。</p>
+            </div>
+            <span class="muted" id="actionCount">0 条动作</span>
+          </div>
+          <div id="actionList" class="action-list"></div>
         </section>
 
         <section class="panel detail-panel" aria-label="明细证据">

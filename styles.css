@@ -312,6 +312,19 @@ th {
   font-weight: 800;
 }
 
+.th-note {
+  display: inline-flex;
+  margin-left: 4px;
+  border: 1px solid #c7d6ea;
+  border-radius: 999px;
+  padding: 1px 5px;
+  color: var(--blue);
+  background: #eef4ff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: help;
+}
+
 tbody tr {
   cursor: pointer;
 }
@@ -327,6 +340,16 @@ td strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.empty-row {
+  color: var(--muted);
+  text-align: center;
+}
+
+.impact-cell {
+  border-bottom: 1px dotted #8394aa;
+  cursor: help;
 }
 
 .priority {
@@ -413,6 +436,18 @@ td strong {
 
 .digest-item strong {
   font-size: 16px;
+}
+
+.digest-item.digest-wide {
+  grid-column: 1 / -1;
+}
+
+.digest-item.digest-wide strong {
+  max-width: none;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: normal;
 }
 
 .layer-block {
@@ -503,6 +538,67 @@ td strong {
 
 .issue-layout.single-column {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.panel-subtitle {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.action-item {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.28fr) minmax(0, 1fr) 88px;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 11px 12px;
+  background: var(--panel-strong);
+}
+
+.action-item strong {
+  display: block;
+  margin-top: 5px;
+  color: #334155;
+  font-size: 13px;
+}
+
+.action-issue {
+  display: inline-flex;
+  border: 1px solid #d4deec;
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--blue-dark);
+  background: #eef4ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.action-item p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.55;
+}
+
+.action-item em {
+  color: var(--blue);
+  font-style: normal;
+  font-weight: 800;
+  text-align: right;
+}
+
+.empty-action {
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  padding: 14px;
+  color: var(--muted);
+  text-align: center;
 }
 
 [hidden] {
@@ -760,8 +856,13 @@ td strong {
   .dashboard-grid,
   .conclusion-card,
   .issue-layout,
-  .detail-card {
+  .detail-card,
+  .action-item {
     grid-template-columns: 1fr;
+  }
+
+  .action-item em {
+    text-align: left;
   }
 
   .funnel-card,

@@ -324,7 +324,8 @@ const state = {
   selectedStoreId: stores[0].id,
   selectedStage: "线索",
   selectedMetric: "30s 以下线索占比",
-  selectedIssue: "all",
+  globalIssueFilter: "all",
+  detailIssue: "all",
   advisorFilter: "all",
   expandedChannel: null,
 };
@@ -332,10 +333,46 @@ const state = {
 const formatter = new Intl.NumberFormat("zh-CN");
 const percent = (value) => `${(value * 100).toFixed(1)}%`;
 const timeProgress = 0.42;
+const impactFormulaText =
+  "预计影响订单 = 异常环节补齐到均值后的理论订单差额，Demo 阶段为样例测算，仅用于排序和优先级判断，不作为销量承诺。";
+const stageMetricMap = {
+  线索: "30s 以下线索占比",
+  到店: "线索到店率",
+  试驾: "试驾订单率",
+  订单: "试驾订单率",
+};
+
+function storeMatchesGlobalIssue(store) {
+  if (state.globalIssueFilter === "all") return true;
+  return detailRecords.some(
+    (record) => record.storeId === store.id && record.issueTags.includes(state.globalIssueFilter),
+  );
+}
 
 function visibleStores() {
   const area = document.querySelector("#areaFilter")?.value || "all";
-  return stores.filter((store) => area === "all" || store.area === area);
+  return stores.filter((store) => (area === "all" || store.area === area) && storeMatchesGlobalIssue(store));
+}
+
+function sortedStores(sourceStores = visibleStores()) {
+  return sourceStores.slice().sort((a, b) => {
+    if (a.priorityRank !== b.priorityRank) return a.priorityRank - b.priorityRank;
+    if (a.abnormalMetrics.length !== b.abnormalMetrics.length) {
+      return b.abnormalMetrics.length - a.abnormalMetrics.length;
+    }
+    return b.impactOrders - a.impactOrders;
+  });
+}
+
+function ensureSelectedStoreVisible() {
+  const scopedStores = sortedStores();
+  if (!scopedStores.length) return;
+  if (!scopedStores.some((store) => store.id === state.selectedStoreId)) {
+    state.selectedStoreId = scopedStores[0].id;
+    state.detailIssue = "all";
+    state.advisorFilter = "all";
+    state.expandedChannel = null;
+  }
 }
 
 function summaryMetrics() {
@@ -366,12 +403,7 @@ function summaryMetrics() {
     },
   );
   const topMetric = Array.from(total.metricCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "暂无明显异常";
-  const topStore = scopedStores
-    .slice()
-    .sort((a, b) => {
-      if (a.priorityRank !== b.priorityRank) return a.priorityRank - b.priorityRank;
-      return b.impactOrders - a.impactOrders;
-    })[0];
+  const topStore = sortedStores(scopedStores)[0] || null;
   return { ...total, storeCount: scopedStores.length, topMetric, topStore };
 }
 
@@ -399,7 +431,7 @@ function filteredDetails() {
     const matchesStore = record.storeId === state.selectedStoreId;
     const matchesScenario = record.scenario === scenario;
     const matchesIssue =
-      state.selectedIssue === "all" || record.issueTags.includes(state.selectedIssue);
+      state.detailIssue === "all" || record.issueTags.includes(state.detailIssue);
     const matchesAdvisor =
       state.advisorFilter === "all" || record.advisor === state.advisorFilter;
     return matchesStore && matchesScenario && matchesIssue && matchesAdvisor;
@@ -422,7 +454,7 @@ function renderIssueOptions() {
     option.textContent = issue;
     issueFilter.appendChild(option);
   });
-  issueFilter.value = state.selectedIssue;
+  issueFilter.value = state.globalIssueFilter;
 }
 
 function renderFunnel() {
@@ -478,15 +510,7 @@ function renderFunnel() {
 }
 
 function renderStoreRows() {
-  const rows = stores
-    .slice()
-    .sort((a, b) => {
-      if (a.priorityRank !== b.priorityRank) return a.priorityRank - b.priorityRank;
-      if (a.abnormalMetrics.length !== b.abnormalMetrics.length) {
-        return b.abnormalMetrics.length - a.abnormalMetrics.length;
-      }
-      return b.impactOrders - a.impactOrders;
-    })
+  const rows = sortedStores()
     .map((store) => {
       return `
         <tr class="${store.id === state.selectedStoreId ? "active" : ""}" data-store-id="${store.id}">
@@ -497,29 +521,47 @@ function renderStoreRows() {
           <td>${percent(store.leadToVisitRate)}</td>
           <td>${percent(store.shortCallRate)}</td>
           <td>${percent(store.driveToOrderRate)}</td>
-          <td>${store.impact}</td>
+          <td><span class="impact-cell" title="${impactFormulaText}">${store.impact}</span></td>
           <td><button class="primary-button" data-store-id="${store.id}" type="button">查看诊断</button></td>
         </tr>
       `;
     })
     .join("");
 
-  document.querySelector("#storeRows").innerHTML = rows;
+  document.querySelector("#storeRows").innerHTML =
+    rows || `<tr><td colspan="9" class="empty-row">当前筛选下暂无命中门店，请调整区域或问题类型。</td></tr>`;
+}
+
+function renderGlobalConclusion() {
+  const summary = summaryMetrics();
+  const issueScope = state.globalIssueFilter === "all" ? "全部问题" : state.globalIssueFilter;
+  if (!summary.storeCount || !summary.topStore) {
+    document.querySelector("#headlineConclusion").textContent = `当前范围暂无${issueScope}命中门店`;
+    document.querySelector("#headlineAction").textContent = "调整筛选后查看优先门店";
+    document.querySelector("#headlineText").textContent =
+      "当前筛选范围没有可展示的样例门店，建议切换区域或问题类型后继续诊断。";
+    return;
+  }
+  document.querySelector("#headlineConclusion").textContent = `当前最严重问题：${summary.topMetric}`;
+  document.querySelector("#headlineAction").textContent = `${summary.topStore.name}：优先查看${summary.topStore.stage}`;
+  document.querySelector("#headlineText").textContent =
+    `当前范围为${issueScope}，共 ${summary.storeCount} 家门店，P1/P2 问题门店 ${summary.problemStores} 家，预计影响 ${summary.impactOrders} 单。最突出问题是${summary.topMetric}，优先处理 ${summary.topStore.name}。`;
+}
+
+function impactBasis(store) {
+  const metrics = store.abnormalMetrics.join(" + ");
+  return `${metrics}，按均值补齐估算影响 ${store.impactOrders} 单`;
 }
 
 function renderStoreDigest() {
   const store = currentStore();
-  const summary = summaryMetrics();
   document.querySelector("#selectedStoreName").textContent = store.name;
-  document.querySelector("#headlineConclusion").textContent = `当前最严重问题：${summary.topMetric}`;
-  document.querySelector("#headlineAction").textContent = `${summary.topStore.name}：先下钻${summary.topStore.stage}`;
-  document.querySelector("#headlineText").textContent =
-    `当前范围共 ${summary.storeCount} 家门店，P1/P2 问题门店 ${summary.problemStores} 家，预计影响 ${summary.impactOrders} 单。最突出问题是${summary.topMetric}，其中 ${summary.topStore.name} 属于${summary.topStore.priority} ${summary.topStore.problemType}，建议优先进入该门店诊断。`;
 
   document.querySelector("#storeDigest").innerHTML = `
     <div class="digest-item"><span>问题优先级</span><strong>${store.priority}</strong></div>
     <div class="digest-item"><span>门店问题类型</span><strong>${store.problemType}</strong></div>
     <div class="digest-item"><span>影响规模</span><strong>${store.impact}</strong></div>
+    <div class="digest-item digest-wide"><span>测算依据</span><strong>${impactBasis(store)}</strong></div>
   `;
 }
 
@@ -668,7 +710,7 @@ function renderIssueChart() {
   document.querySelector("#issueChart").innerHTML = stats
     .map(
       (item) => `
-        <div class="issue-row ${item.issue === state.selectedIssue ? "active" : ""}" data-issue="${item.issue}">
+        <div class="issue-row ${item.issue === state.detailIssue ? "active" : ""}" data-issue="${item.issue}">
           <div class="issue-name" title="${item.issue}">${item.issue}</div>
           <div>
             <div class="bar-track"><div class="bar" style="width: ${Math.max(item.pct * 100, item.count ? 8 : 0)}%"></div></div>
@@ -721,6 +763,100 @@ function renderAdvisorList() {
       .join("") || `<div class="muted">当前筛选下暂无顾问明细</div>`;
 }
 
+function channelActions(store) {
+  return store.channelShortCall
+    .slice()
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 3)
+    .map((channel) => ({
+      issue: `${channel.channel}短通话偏高`,
+      owner: "门店经理 / 网销主管",
+      suggestion: `优先抽查${channel.channel}短通话线索话术，确认线索承接是否过快结束、需求是否未展开、邀约理由是否不足。`,
+      evidenceCount: channel.leads,
+      evidenceLabel: `${channel.leads} 条线索`,
+    }));
+}
+
+function diagnosisActions() {
+  const store = currentStore();
+  if (currentDiagnosisType() === "channel_short_call") {
+    return channelActions(store);
+  }
+  const records = allScenarioDetails().filter(
+    (record) => state.detailIssue === "all" || record.issueTags.includes(state.detailIssue),
+  );
+  const issueMap = new Map();
+  records.forEach((record) => {
+    const key = record.primaryIssue;
+    const current = issueMap.get(key) || {
+      issue: key,
+      owner: currentDiagnosisType() === "test_drive" ? "销售经理 / 试驾顾问" : "门店经理 / 邀约顾问",
+      suggestions: new Map(),
+      evidenceCount: 0,
+    };
+    current.evidenceCount += 1;
+    current.suggestions.set(record.suggestion, (current.suggestions.get(record.suggestion) || 0) + 1);
+    issueMap.set(key, current);
+  });
+  return Array.from(issueMap.values())
+    .sort((a, b) => b.evidenceCount - a.evidenceCount)
+    .slice(0, 4)
+    .map((item) => {
+      const suggestion = Array.from(item.suggestions.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "复盘相关明细证据并统一顾问动作。";
+      return {
+        issue: item.issue,
+        owner: item.owner,
+        suggestion,
+        evidenceCount: item.evidenceCount,
+        evidenceLabel: `${item.evidenceCount} 条证据`,
+      };
+    });
+}
+
+function renderActionList() {
+  const actions = diagnosisActions();
+  const typeName =
+    currentDiagnosisType() === "channel_short_call"
+      ? "渠道短通话"
+      : currentDiagnosisType() === "test_drive"
+        ? "试驾接待"
+        : "IP 电话邀约";
+  document.querySelector("#actionSummary").textContent = `${currentStore().name}｜${typeName}整改动作归纳`;
+  document.querySelector("#actionCount").textContent = `${actions.length} 条动作`;
+  document.querySelector("#actionList").innerHTML =
+    actions
+      .map(
+        (action) => `
+          <article class="action-item">
+            <div>
+              <span class="action-issue">${action.issue}</span>
+              <strong>${action.owner}</strong>
+            </div>
+            <p>${action.suggestion}</p>
+            <em>${action.evidenceLabel}</em>
+          </article>
+        `,
+      )
+      .join("") || `<div class="empty-action">当前筛选下暂无可汇总动作。</div>`;
+}
+
+function renderEmptyDiagnosis() {
+  document.querySelector("#selectedStoreName").textContent = "暂无命中门店";
+  document.querySelector("#storeDigest").innerHTML = `
+    <div class="digest-item digest-wide"><span>当前状态</span><strong>当前区域和问题类型筛选下暂无门店命中，请调整筛选条件。</strong></div>
+  `;
+  document.querySelector("#stageTabs").innerHTML = "";
+  document.querySelector("#metricTabs").innerHTML = "";
+  document.querySelector("#diagnosisTitle").textContent = "暂无问题诊断";
+  document.querySelector("#diagnosisSub").textContent = "当前筛选下没有可展示的诊断对象。";
+  document.querySelector("#issueChart").innerHTML = "";
+  document.querySelector("#advisorCard").hidden = true;
+  document.querySelector("#actionSummary").textContent = "当前筛选下暂无门店级整改动作。";
+  document.querySelector("#actionCount").textContent = "0 条动作";
+  document.querySelector("#actionList").innerHTML = `<div class="empty-action">调整筛选后查看整改清单。</div>`;
+  document.querySelector(".detail-panel").hidden = true;
+}
+
 function renderDetails() {
   if (currentDiagnosisType() === "channel_short_call") {
     document.querySelector(".detail-panel").hidden = true;
@@ -756,14 +892,21 @@ function renderDetails() {
 
 function renderAll() {
   validateDemoData();
+  ensureSelectedStoreVisible();
   renderIssueOptions();
   renderStoreRows();
   renderFunnel();
+  renderGlobalConclusion();
+  if (!visibleStores().length) {
+    renderEmptyDiagnosis();
+    return;
+  }
   renderStoreDigest();
   renderStageTabs();
   renderMetricTabs();
   renderIssueChart();
   renderAdvisorList();
+  renderActionList();
   renderDetails();
 }
 
@@ -793,7 +936,7 @@ document.addEventListener("click", (event) => {
   const storeTarget = event.target.closest("[data-store-id]");
   if (storeTarget) {
     state.selectedStoreId = storeTarget.dataset.storeId;
-    state.selectedIssue = "all";
+    state.detailIssue = "all";
     state.advisorFilter = "all";
     state.expandedChannel = null;
     renderAll();
@@ -803,14 +946,18 @@ document.addEventListener("click", (event) => {
   const stageTarget = event.target.closest("[data-stage]");
   if (stageTarget) {
     state.selectedStage = stageTarget.dataset.stage;
-    renderStageTabs();
+    state.selectedMetric = stageMetricMap[state.selectedStage] || state.selectedMetric;
+    state.detailIssue = "all";
+    state.advisorFilter = "all";
+    state.expandedChannel = null;
+    renderAll();
     return;
   }
 
   const metricTarget = event.target.closest("[data-metric]");
   if (metricTarget) {
     state.selectedMetric = metricTarget.dataset.metric;
-    state.selectedIssue = "all";
+    state.detailIssue = "all";
     state.advisorFilter = "all";
     state.expandedChannel = null;
     renderAll();
@@ -822,17 +969,18 @@ document.addEventListener("click", (event) => {
     const channel = channelTarget.dataset.channel;
     state.expandedChannel = state.expandedChannel === channel ? null : channel;
     renderIssueChart();
+    renderActionList();
     renderDetails();
     return;
   }
 
   const issueTarget = event.target.closest("[data-issue]");
   if (issueTarget) {
-    state.selectedIssue = issueTarget.dataset.issue;
+    state.detailIssue = issueTarget.dataset.issue;
     state.advisorFilter = "all";
-    document.querySelector("#issueFilter").value = state.selectedIssue;
     renderIssueChart();
     renderAdvisorList();
+    renderActionList();
     renderDetails();
     return;
   }
@@ -846,11 +994,12 @@ document.addEventListener("click", (event) => {
 });
 
 document.querySelector("#issueFilter").addEventListener("change", (event) => {
-  state.selectedIssue = event.target.value;
+  state.globalIssueFilter = event.target.value;
+  ensureSelectedStoreVisible();
+  state.detailIssue = "all";
   state.advisorFilter = "all";
-  renderIssueChart();
-  renderAdvisorList();
-  renderDetails();
+  state.expandedChannel = null;
+  renderAll();
 });
 
 document.querySelector("#areaFilter").addEventListener("change", (event) => {
@@ -858,18 +1007,19 @@ document.querySelector("#areaFilter").addEventListener("change", (event) => {
   const candidate = stores.find((store) => area === "all" || store.area === area);
   if (candidate) {
     state.selectedStoreId = candidate.id;
-    state.selectedIssue = "all";
+    ensureSelectedStoreVisible();
+    state.detailIssue = "all";
     state.advisorFilter = "all";
     renderAll();
   }
 });
 
 document.querySelector("#resetIssueButton").addEventListener("click", () => {
-  state.selectedIssue = "all";
+  state.detailIssue = "all";
   state.advisorFilter = "all";
-  document.querySelector("#issueFilter").value = "all";
   renderIssueChart();
   renderAdvisorList();
+  renderActionList();
   renderDetails();
 });
 
