@@ -48,12 +48,12 @@
 
 后续字段对齐：
 
-| 页面指标 | 观远字段候选 | 说明 |
+| 页面指标 | 观远字段 | 说明 |
 |---|---|---|
-| 线索 | `today_leads_cnt` | 当日线索数 |
-| 到店 | `today_pflow_cnt` / `today_fst_touch_pflow_cnt` | Demo 先展示到店，真实接入时确认是否用首触到店 |
-| 试驾 | `today_trial_cnt` / `today_fst_touch_trial_cnt` | Demo 先展示试驾，真实接入时确认是否用首触试驾 |
-| 订单 | `today_order_cnt` / `today_fst_touch_order_cnt` | Demo 先展示订单，真实接入时确认是否用首触订单 |
+| 线索 | `today_indpdt_leads_cnt` | 独立线索数 |
+| 到店 | `today_fst_touch_pflow_cnt` | 首触到店 |
+| 试驾 | `today_fst_touch_trial_cnt` | 首触试驾 |
+| 订单 | `today_fst_touch_order_cnt` | 首触订单 |
 
 ### 4.2 问题最严重门店清单
 
@@ -199,7 +199,6 @@ IP 电话和试驾接待共用同一套问题类型，只是数据来源不同�
 后续阶段包括：
 
 - 接入观远聚合指标数据。
-- 确认到店、试驾、订单字段是否采用首触口径。
 - 接入 IP 电话文本明细。
 - 接入试驾录音文本明细。
 - 建立 LLM 问题打标流程。
