@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>销售转化经营诊断工作台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">经营诊断汇报页</p>
+          <h1>销售转化工作台</h1>
+        </div>
+        <div class="topbar-summary" aria-label="当前诊断摘要">
+          <span>周期：2026-05</span>
+          <span>覆盖门店：126</span>
+          <span>问题门店：18</span>
+        </div>
+      </header>
+
+      <section class="filters" aria-label="筛选条件">
+        <label>
+          日期
+          <select id="monthFilter">
+            <option value="2026-05">2026-05</option>
+            <option value="2026-04">2026-04</option>
+          </select>
+        </label>
+        <label>
+          品牌
+          <select id="brandFilter">
+            <option value="荣威">荣威</option>
+          </select>
+        </label>
+        <label>
+          车系
+          <select id="seriesFilter">
+            <option value="all">全部车系</option>
+            <option value="D7">D7</option>
+            <option value="RX5">RX5</option>
+          </select>
+        </label>
+        <label>
+          区域
+          <select id="areaFilter">
+            <option value="all">全部区域</option>
+            <option value="华东一区">华东一区</option>
+            <option value="华南一区">华南一区</option>
+            <option value="西南一区">西南一区</option>
+          </select>
+        </label>
+        <label>
+          问题类型
+          <select id="issueFilter">
+            <option value="all">全部问题</option>
+          </select>
+        </label>
+      </section>
+
+      <main class="dashboard-grid">
+        <section class="summary-card conclusion-card" aria-label="经营结论">
+          <div>
+            <h2 id="headlineConclusion">优先处理邀约阶段问题门店</h2>
+            <p id="headlineText">
+              TOP 问题门店集中表现为 30s 以下线索占比高、线索到店率低，建议先排查电话邀约质量，再看试驾转订单承接。
+            </p>
+          </div>
+          <div class="action-box">
+            <span>建议动作</span>
+            <strong id="headlineAction">先看 P1 / P2 问题门店</strong>
+          </div>
+        </section>
+
+        <section class="summary-card funnel-card" aria-label="销售转化漏斗">
+          <div class="section-heading">
+            <div>
+              <h2>销售转化漏斗</h2>
+            </div>
+            <span class="muted">下发线索 -> 首触到店 -> 首触试驾 -> 首触订单</span>
+          </div>
+          <div class="funnel" id="funnel"></div>
+        </section>
+
+        <section class="panel store-panel" aria-label="问题门店列表">
+          <div class="section-heading">
+            <div>
+              <h2>问题优先处理门店清单</h2>
+            </div>
+            <span class="muted">按问题优先级、异常指标数、影响规模排序</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>门店</th>
+                  <th>问题优先级</th>
+                  <th>门店问题类型</th>
+                  <th>命中异常指标</th>
+                  <th>线索到店率</th>
+                  <th>30s以下占比</th>
+                  <th>试驾订单率</th>
+                  <th>影响规模</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="storeRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel diagnosis-panel" aria-label="门店诊断">
+          <div class="section-heading">
+            <div>
+              <h2 id="selectedStoreName">门店名称</h2>
+            </div>
+          </div>
+
+          <div class="store-digest" id="storeDigest"></div>
+
+          <div class="layer-block">
+            <div class="layer-label">核心环节</div>
+            <div class="stage-tabs" id="stageTabs"></div>
+          </div>
+
+          <div class="layer-block">
+            <div class="layer-label">关键过程指标</div>
+            <div class="metric-tabs" id="metricTabs"></div>
+          </div>
+
+          <div class="layer-block">
+            <div class="layer-label">问题诊断</div>
+            <div class="diagnosis-head">
+              <div>
+                <h3 id="diagnosisTitle">IP 电话邀约问题</h3>
+                <p id="diagnosisSub">按问题类型、顾问和明细证据下钻。</p>
+              </div>
+              <button class="secondary-button" id="resetIssueButton" type="button">重置问题筛选</button>
+            </div>
+            <div class="issue-layout">
+              <div class="issue-chart" id="issueChart"></div>
+              <div class="advisor-card" id="advisorCard">
+                <h4>顾问问题排行</h4>
+                <div id="advisorList"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel detail-panel" aria-label="明细证据">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">明细下钻</p>
+              <h2>电话 / 试驾证据</h2>
+            </div>
+            <span class="muted" id="detailCount">0 条明细</span>
+          </div>
+          <div id="detailList" class="detail-list"></div>
+        </section>
+      </main>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
